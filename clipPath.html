@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>demo-clipPath</title>
+</head>
+<body style="background-color:rgb(255, 255, 255); ">
+  <button id="btn" style="cursor: pointer; margin: 500px;">黑夜</button>
+</body>
+<script defer>
+  const btnId = document.querySelector('#btn')
+  const nextTick = () => new Promise((resolve) => setTimeout(resolve, 0));
+  btnId.addEventListener('click', async function(event){
+    const body = document.body;
+    const isAppearanceTransition =
+      // @ts-expect-error
+      document.startViewTransition &&
+      !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!isAppearanceTransition || !event) {
+      return;
+    }
+    const x = event.clientX
+    const y = event.clientY
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    )
+    const transition = document.startViewTransition(async () => {
+      const currentBackgroundColor = window.getComputedStyle(body).getPropertyValue('background-color');
+      if (currentBackgroundColor === 'rgb(0, 0, 0)') {
+          body.style.backgroundColor = 'rgb(255, 255, 255)';
+          document.querySelector('html').classList.remove('dark')
+          body.style.color = '#000';
+          btnId.innerHTML = '黑夜'
+      } else {
+          document.querySelector('html').classList.add('dark')
+          body.style.backgroundColor = 'rgb(0, 0, 0)';
+          body.style.color = '#fff';
+          btnId.innerHTML = '白天'
+      }
+      await nextTick()
+    })
+    transition.ready.then(async () => {
+      const clipPath = [
+        `circle(0px at ${x}px ${y}px)`,
+        `circle(${endRadius}px at ${x}px ${y}px)`,
+      ]
+      document.documentElement.animate(
+        {
+          clipPath: body.style.backgroundColor != 'rgb(255, 255, 255)' ? [...clipPath].reverse() : clipPath,
+        },
+        {
+          duration: 400,
+          easing: 'ease-in',
+          pseudoElement: body.style.backgroundColor != 'rgb(255, 255, 255)' 
+          ? '::view-transition-old(root)'
+          : '::view-transition-new(root)',
+        }
+      )
+      await nextTick()
+    })
+  })
+</script>
+<style>
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 2147483646;
+}
+
+.dark::view-transition-old(root) {
+  z-index: 2147483646;
+}
+
+.dark::view-transition-new(root) {
+  z-index: 1;
+}
+</style>
+</html>
